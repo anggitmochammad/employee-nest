@@ -1,0 +1,51 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id        Int        @id @default(autoincrement())
+  name      String
+  email     String     @unique
+  password  String
+  role      String
+  auditLogs AuditLog[]
+
+  @@map("users")
+}
+
+model Department {
+  id        Int        @id @default(autoincrement())
+  name      String
+  employees Employee[]
+
+  @@map("departments")
+}
+
+model Employee {
+  id           Int        @id @default(autoincrement())
+  name         String
+  email        String     @unique
+  phone        String
+  status       String
+  departmentId Int        @map("department_id")
+  department   Department @relation(fields: [departmentId], references: [id])
+
+  @@map("employees")
+}
+
+model AuditLog {
+  id        Int      @id @default(autoincrement())
+  userId    Int      @map("user_id")
+  user      User     @relation(fields: [userId], references: [id])
+  action    String
+  entity    String
+  entityId  Int      @map("entity_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("audit_logs")
+}
