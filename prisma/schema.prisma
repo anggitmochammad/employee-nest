@@ -1,6 +1,6 @@
 generator client {
   provider = "prisma-client"
-  output   = "../generated/prisma"
+  output   = "../src/generated/prisma"
 }
 
 datasource db {
@@ -31,11 +31,13 @@ model Employee {
   name         String
   email        String     @unique
   phone        String
-  status       String
+  status       Boolean    @default(true)
   departmentId Int        @map("department_id")
   department   Department @relation(fields: [departmentId], references: [id])
 
   @@map("employees")
+  @@index([departmentId])
+  @@index([status])
 }
 
 model AuditLog {
