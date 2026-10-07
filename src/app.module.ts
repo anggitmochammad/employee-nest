@@ -8,6 +8,7 @@ import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { HealthController } from './health/health.controller.js';
 import { AuthModule } from './auth/auth.module.js';
 import { DepartmentsModule } from './departments/departments.module.js';
+import { EmployeesModule } from './employees/employees.module.js';
 
 @Module({
   imports: [
@@ -17,6 +18,7 @@ import { DepartmentsModule } from './departments/departments.module.js';
     PrismaModule,
     AuthModule,
     DepartmentsModule,
+    EmployeesModule,
     ThrottlerModule.forRoot([{ ttl: 60_000, limit: 60 }]),
   ],
   controllers: [AppController, HealthController],
