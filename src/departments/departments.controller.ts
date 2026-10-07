@@ -23,6 +23,8 @@ import {
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
 import { Role } from '../auth/auth.types.js';
+import type { AuthenticatedUser } from '../auth/auth.types.js';
+import { CurrentUser } from '../auth/decorators/current-user.decorator.js';
 import { Roles } from '../auth/decorators/roles.decorator.js';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard.js';
 import { RolesGuard } from '../auth/guards/roles.guard.js';
@@ -62,8 +64,8 @@ export class DepartmentsController {
     description: 'Nama wajib berupa string yang tidak kosong',
   })
   @ApiConflictResponse({ description: 'Nama department sudah dipakai' })
-  create(@Body() dto: DepartmentDto) {
-    return this.departments.create(dto);
+  create(@Body() dto: DepartmentDto, @CurrentUser() user: AuthenticatedUser) {
+    return this.departments.create(dto, user.id);
   }
 
   @Patch(':id')
@@ -75,8 +77,12 @@ export class DepartmentsController {
   @ApiBadRequestResponse({ description: 'ID atau nama tidak valid' })
   @ApiNotFoundResponse({ description: 'Department tidak ditemukan' })
   @ApiConflictResponse({ description: 'Nama department sudah dipakai' })
-  update(@Param() params: DepartmentIdDto, @Body() dto: DepartmentDto) {
-    return this.departments.update(params.id, dto);
+  update(
+    @Param() params: DepartmentIdDto,
+    @Body() dto: DepartmentDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.departments.update(params.id, dto, user.id);
   }
 
   @Delete(':id')
@@ -92,7 +98,10 @@ export class DepartmentsController {
   @ApiBadRequestResponse({ description: 'ID tidak valid' })
   @ApiNotFoundResponse({ description: 'Department tidak ditemukan' })
   @ApiConflictResponse({ description: 'Department masih memiliki employee' })
-  remove(@Param() params: DepartmentIdDto) {
-    return this.departments.remove(params.id);
+  remove(
+    @Param() params: DepartmentIdDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.departments.remove(params.id, user.id);
   }
 }

@@ -20,6 +20,7 @@ describe('Departments (e2e)', () => {
     update: vi.fn(),
     delete: vi.fn(),
   };
+  const auditLog = { create: vi.fn() };
   const databaseError = (code: string) =>
     new Prisma.PrismaClientKnownRequestError('Database error', {
       code,
@@ -31,6 +32,9 @@ describe('Departments (e2e)', () => {
       .overrideProvider(PrismaService)
       .useValue({
         department,
+        auditLog,
+        $transaction: (callback: (tx: unknown) => Promise<unknown>) =>
+          callback({ department, auditLog }),
         user: {
           findUnique: vi.fn(({ where }: { where: { id: number } }) =>
             Promise.resolve({
@@ -54,6 +58,8 @@ describe('Departments (e2e)', () => {
     Object.values(department).forEach((mock) => mock.mockReset());
     department.findFirst.mockResolvedValue(null);
     department.findUnique.mockResolvedValue({ id: 1 });
+    auditLog.create.mockReset();
+    auditLog.create.mockResolvedValue({ id: 1 });
   });
 
   afterAll(async () => {
@@ -133,6 +139,16 @@ describe('Departments (e2e)', () => {
       .auth(adminToken, { type: 'bearer' })
       .expect(204);
     expect(removed.text).toBe('');
+    expect(auditLog.create).toHaveBeenCalledTimes(3);
+    expect(auditLog.create).toHaveBeenNthCalledWith(1, {
+      data: { userId: 1, action: 'create', entity: 'department', entityId: 1 },
+    });
+    expect(auditLog.create).toHaveBeenNthCalledWith(2, {
+      data: { userId: 1, action: 'update', entity: 'department', entityId: 1 },
+    });
+    expect(auditLog.create).toHaveBeenNthCalledWith(3, {
+      data: { userId: 1, action: 'delete', entity: 'department', entityId: 1 },
+    });
   });
 
   it('rejects duplicate names regardless of capitalization or surrounding spaces', async () => {

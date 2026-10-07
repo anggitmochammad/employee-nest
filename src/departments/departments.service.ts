@@ -5,11 +5,15 @@ import {
 } from '@nestjs/common';
 import { Prisma } from '../generated/prisma/client.js';
 import { PrismaService } from '../prisma/prisma.service.js';
+import { AuditLogsService } from '../audit-logs/audit-logs.service.js';
 import type { DepartmentDto } from './dto/department.dto.js';
 
 @Injectable()
 export class DepartmentsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly auditLogs: AuditLogsService,
+  ) {}
 
   findAll() {
     return this.prisma.department.findMany({ orderBy: { id: 'asc' } });
@@ -29,12 +33,24 @@ export class DepartmentsService {
     }
   }
 
-  async create(dto: DepartmentDto) {
+  async create(dto: DepartmentDto, userId: number) {
     await this.ensureNameAvailable(dto.name);
-    return this.prisma.department.create({ data: { name: dto.name } });
+    return this.prisma.$transaction(async (tx) => {
+      const department = await tx.department.create({
+        data: { name: dto.name },
+      });
+      await this.auditLogs.record(
+        tx,
+        userId,
+        'create',
+        'department',
+        department.id,
+      );
+      return department;
+    });
   }
 
-  async update(id: number, dto: DepartmentDto) {
+  async update(id: number, dto: DepartmentDto, userId: number) {
     const current = await this.prisma.department.findUnique({
       where: { id },
       select: { id: true },
@@ -45,9 +61,13 @@ export class DepartmentsService {
 
     await this.ensureNameAvailable(dto.name, id);
     try {
-      return await this.prisma.department.update({
-        where: { id },
-        data: { name: dto.name },
+      return await this.prisma.$transaction(async (tx) => {
+        const department = await tx.department.update({
+          where: { id },
+          data: { name: dto.name },
+        });
+        await this.auditLogs.record(tx, userId, 'update', 'department', id);
+        return department;
       });
     } catch (error) {
       if (
@@ -60,11 +80,14 @@ export class DepartmentsService {
     }
   }
 
-  async remove(id: number): Promise<void> {
+  async remove(id: number, userId: number): Promise<void> {
     try {
       // Foreign key RESTRICT memeriksa relasi secara atomik saat DELETE.
       // Employee yang masuk bersamaan tidak dapat menyebabkan data yatim.
-      await this.prisma.department.delete({ where: { id } });
+      await this.prisma.$transaction(async (tx) => {
+        await tx.department.delete({ where: { id } });
+        await this.auditLogs.record(tx, userId, 'delete', 'department', id);
+      });
     } catch (error) {
       if (error instanceof Prisma.PrismaClientKnownRequestError) {
         if (error.code === 'P2025') {

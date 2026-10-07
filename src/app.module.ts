@@ -9,6 +9,7 @@ import { HealthController } from './health/health.controller.js';
 import { AuthModule } from './auth/auth.module.js';
 import { DepartmentsModule } from './departments/departments.module.js';
 import { EmployeesModule } from './employees/employees.module.js';
+import { AuditLogsModule } from './audit-logs/audit-logs.module.js';
 
 @Module({
   imports: [
@@ -19,6 +20,7 @@ import { EmployeesModule } from './employees/employees.module.js';
     AuthModule,
     DepartmentsModule,
     EmployeesModule,
+    AuditLogsModule,
     ThrottlerModule.forRoot([{ ttl: 60_000, limit: 60 }]),
   ],
   controllers: [AppController, HealthController],

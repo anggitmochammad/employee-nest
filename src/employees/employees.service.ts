@@ -6,6 +6,8 @@ import {
 } from '@nestjs/common';
 import { Prisma } from '../generated/prisma/client.js';
 import { PrismaService } from '../prisma/prisma.service.js';
+import { AuditLogsService } from '../audit-logs/audit-logs.service.js';
+import { employeesToCsv } from './employees.csv.js';
 import type { CreateEmployeeDto } from './dto/create-employee.dto.js';
 import type { UpdateEmployeeDto } from './dto/update-employee.dto.js';
 import {
@@ -20,7 +22,18 @@ const withDepartment = {
 
 @Injectable()
 export class EmployeesService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly auditLogs: AuditLogsService,
+  ) {}
+
+  async exportCsv(): Promise<string> {
+    const employees = await this.prisma.employee.findMany({
+      include: { department: { select: { name: true } } },
+      orderBy: { id: 'asc' },
+    });
+    return employeesToCsv(employees);
+  }
 
   async findAll(query: ListEmployeesQueryDto) {
     const { page, limit, search, departmentId, status, sortBy, sortOrder } =
@@ -83,44 +96,61 @@ export class EmployeesService {
     throw error;
   }
 
-  async create(dto: CreateEmployeeDto) {
+  async create(dto: CreateEmployeeDto, userId: number) {
     await this.requireDepartment(dto.departmentId);
     try {
-      return await this.prisma.employee.create({
-        data: {
-          name: dto.name,
-          email: dto.email,
-          phone: dto.phone,
-          departmentId: dto.departmentId,
-          status: dto.status ?? true,
-        },
-        include: withDepartment,
+      return await this.prisma.$transaction(async (tx) => {
+        const employee = await tx.employee.create({
+          data: {
+            name: dto.name,
+            email: dto.email,
+            phone: dto.phone,
+            departmentId: dto.departmentId,
+            status: dto.status ?? true,
+          },
+          include: withDepartment,
+        });
+        await this.auditLogs.record(
+          tx,
+          userId,
+          'create',
+          'employee',
+          employee.id,
+        );
+        return employee;
       });
     } catch (error) {
       this.mapWriteError(error);
     }
   }
 
-  async update(id: number, dto: UpdateEmployeeDto) {
+  async update(id: number, dto: UpdateEmployeeDto, userId: number) {
     if (Object.keys(dto).length === 0)
       throw new BadRequestException('At least one field is required');
     await this.findOne(id);
     if (dto.departmentId !== undefined)
       await this.requireDepartment(dto.departmentId);
     try {
-      return await this.prisma.employee.update({
-        where: { id },
-        data: dto,
-        include: withDepartment,
+      return await this.prisma.$transaction(async (tx) => {
+        const employee = await tx.employee.update({
+          where: { id },
+          data: dto,
+          include: withDepartment,
+        });
+        await this.auditLogs.record(tx, userId, 'update', 'employee', id);
+        return employee;
       });
     } catch (error) {
       this.mapWriteError(error);
     }
   }
 
-  async remove(id: number): Promise<void> {
+  async remove(id: number, userId: number): Promise<void> {
     try {
-      await this.prisma.employee.delete({ where: { id } });
+      await this.prisma.$transaction(async (tx) => {
+        await tx.employee.delete({ where: { id } });
+        await this.auditLogs.record(tx, userId, 'delete', 'employee', id);
+      });
     } catch (error) {
       this.mapWriteError(error);
     }

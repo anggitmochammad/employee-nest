@@ -21,6 +21,7 @@ describe('Employees (e2e)', () => {
     delete: vi.fn(),
   };
   const department = { findUnique: vi.fn() };
+  const auditLog = { create: vi.fn() };
   const record = {
     id: 1,
     name: 'Jane Doe',
@@ -42,6 +43,9 @@ describe('Employees (e2e)', () => {
       .useValue({
         employee,
         department,
+        auditLog,
+        $transaction: (callback: (tx: unknown) => Promise<unknown>) =>
+          callback({ employee, auditLog }),
         user: {
           findUnique: vi.fn(({ where }: { where: { id: number } }) =>
             Promise.resolve({
@@ -66,6 +70,8 @@ describe('Employees (e2e)', () => {
     department.findUnique.mockReset();
     department.findUnique.mockResolvedValue({ id: 2 });
     employee.findUnique.mockResolvedValue(record);
+    auditLog.create.mockReset();
+    auditLog.create.mockResolvedValue({ id: 1 });
   });
 
   afterAll(async () => {
@@ -190,6 +196,9 @@ describe('Employees (e2e)', () => {
         },
       }),
     );
+    expect(auditLog.create).toHaveBeenCalledWith({
+      data: { userId: 1, action: 'create', entity: 'employee', entityId: 1 },
+    });
   });
 
   it.each([
@@ -292,6 +301,13 @@ describe('Employees (e2e)', () => {
       .delete('/api/employees/1')
       .auth(adminToken, { type: 'bearer' })
       .expect(204);
+    expect(auditLog.create).toHaveBeenCalledTimes(2);
+    expect(auditLog.create).toHaveBeenNthCalledWith(1, {
+      data: { userId: 1, action: 'update', entity: 'employee', entityId: 1 },
+    });
+    expect(auditLog.create).toHaveBeenNthCalledWith(2, {
+      data: { userId: 1, action: 'delete', entity: 'employee', entityId: 1 },
+    });
   });
 
   it('returns 404 for missing employees and rejects invalid IDs', async () => {
