@@ -6,6 +6,7 @@ import {
   AllExceptionsFilter,
 } from './common/filters/all-exceptions.filter.js';
 import type { Request, Response } from 'express';
+import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 
 // Digunakan oleh aplikasi dan pengujian E2E agar keduanya memakai konfigurasi yang sama.
 export async function configureApp(app: INestApplication): Promise<void> {
@@ -35,6 +36,51 @@ export async function configureApp(app: INestApplication): Promise<void> {
     methods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
   });
+
+  // Swagger UI sengaja berada di luar prefix /api agar URL dokumentasi tetap ringkas.
+  const swaggerConfig = new DocumentBuilder()
+    .setTitle('Employee Management API')
+    .setDescription('Dokumentasi endpoint Employee Management System')
+    .setVersion('1.0')
+    .addBearerAuth(
+      { type: 'http', scheme: 'bearer', bearerFormat: 'JWT' },
+      'access-token',
+    )
+    .build();
+  const swaggerDocument = SwaggerModule.createDocument(app, swaggerConfig);
+  SwaggerModule.setup('api-documentation', app, swaggerDocument, {
+    useGlobalPrefix: false,
+    customSiteTitle: 'Employee Management API Documentation',
+    swaggerOptions: {
+      persistAuthorization: true,
+      tryItOutEnabled: true,
+      displayRequestDuration: true,
+      filter: true,
+    },
+    // Swagger menamai tombol pengiriman "Execute"; sesuaikan dengan istilah mini Postman.
+    customJsStr: `
+      (() => {
+        const root = document.getElementById('swagger-ui');
+        if (!root) return;
+
+        const renameExecuteButtons = () => {
+          root.querySelectorAll('button.execute').forEach((button) => {
+            // Ubah hanya label bawaan agar observer tidak memicu dirinya terus-menerus.
+            // Label lain seperti status loading tetap dikelola Swagger.
+            if (button.textContent.trim() === 'Execute') {
+              button.textContent = 'Send Request';
+            }
+          });
+        };
+        new MutationObserver(renameExecuteButtons).observe(root, {
+          childList: true,
+          subtree: true,
+        });
+        renameExecuteButtons();
+      })();
+    `,
+  });
+
   app.enableShutdownHooks();
   await app.init();
 

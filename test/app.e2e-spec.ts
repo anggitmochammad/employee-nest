@@ -80,6 +80,28 @@ describe('AppController (e2e)', () => {
     await request(app.getHttpServer()).get('/api/health').expect(404);
   });
 
+  it('serves Swagger documentation outside the API prefix', async () => {
+    const page = await request(app.getHttpServer())
+      .get('/api-documentation')
+      .expect(200);
+    expect(page.text).toContain('Employee Management API Documentation');
+    expect(page.text).toContain('Send Request');
+
+    const specification = await request(app.getHttpServer())
+      .get('/api-documentation-json')
+      .expect(200);
+    expect(specification.body.paths).toHaveProperty('/api/auth/login');
+    expect(specification.body.paths).toHaveProperty('/api/auth/me');
+    expect(specification.body.paths).toHaveProperty('/health');
+    expect(specification.body.components.securitySchemes).toHaveProperty(
+      'access-token',
+    );
+
+    await request(app.getHttpServer())
+      .get('/api/api-documentation')
+      .expect(404);
+  });
+
   it('returns 503 when the database health query fails', async () => {
     databaseQuery.mockRejectedValueOnce(new Error('Database unavailable'));
     const response = await request(app.getHttpServer())
