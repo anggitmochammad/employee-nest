@@ -197,7 +197,13 @@ describe('Employees (e2e)', () => {
       }),
     );
     expect(auditLog.create).toHaveBeenCalledWith({
-      data: { userId: 1, action: 'create', entity: 'employee', entityId: 1 },
+      data: {
+        userId: 1,
+        action: 'create',
+        entity: 'employee',
+        entityId: 1,
+        entityData: record,
+      },
     });
   });
 
@@ -348,10 +354,23 @@ describe('Employees (e2e)', () => {
       .expect(204);
     expect(auditLog.create).toHaveBeenCalledTimes(2);
     expect(auditLog.create).toHaveBeenNthCalledWith(1, {
-      data: { userId: 1, action: 'update', entity: 'employee', entityId: 1 },
+      data: {
+        userId: 1,
+        action: 'update',
+        entity: 'employee',
+        entityId: 1,
+        entityData: { ...record, status: false },
+        previousData: record,
+      },
     });
     expect(auditLog.create).toHaveBeenNthCalledWith(2, {
-      data: { userId: 1, action: 'delete', entity: 'employee', entityId: 1 },
+      data: {
+        userId: 1,
+        action: 'delete',
+        entity: 'employee',
+        entityId: 1,
+        entityData: record,
+      },
     });
   });
 

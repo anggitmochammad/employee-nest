@@ -116,6 +116,7 @@ export class EmployeesService {
           'create',
           'employee',
           employee.id,
+          employee,
         );
         return employee;
       });
@@ -132,12 +133,25 @@ export class EmployeesService {
       await this.requireDepartment(dto.departmentId);
     try {
       return await this.prisma.$transaction(async (tx) => {
+        const previous = await tx.employee.findUnique({
+          where: { id },
+          include: withDepartment,
+        });
+        if (!previous) throw new NotFoundException('Employee not found');
         const employee = await tx.employee.update({
           where: { id },
           data: dto,
           include: withDepartment,
         });
-        await this.auditLogs.record(tx, userId, 'update', 'employee', id);
+        await this.auditLogs.record(
+          tx,
+          userId,
+          'update',
+          'employee',
+          id,
+          employee,
+          previous,
+        );
         return employee;
       });
     } catch (error) {
@@ -148,8 +162,18 @@ export class EmployeesService {
   async remove(id: number, userId: number): Promise<void> {
     try {
       await this.prisma.$transaction(async (tx) => {
-        await tx.employee.delete({ where: { id } });
-        await this.auditLogs.record(tx, userId, 'delete', 'employee', id);
+        const employee = await tx.employee.delete({
+          where: { id },
+          include: withDepartment,
+        });
+        await this.auditLogs.record(
+          tx,
+          userId,
+          'delete',
+          'employee',
+          id,
+          employee,
+        );
       });
     } catch (error) {
       this.mapWriteError(error);

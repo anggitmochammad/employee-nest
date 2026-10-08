@@ -47,6 +47,8 @@ model AuditLog {
   action    String
   entity    String
   entityId  Int      @map("entity_id")
+  entityData Json?    @map("entity_data")
+  previousData Json?  @map("previous_data")
   createdAt DateTime @default(now()) @map("created_at")
 
   @@map("audit_logs")

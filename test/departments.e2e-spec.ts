@@ -57,7 +57,7 @@ describe('Departments (e2e)', () => {
   beforeEach(() => {
     Object.values(department).forEach((mock) => mock.mockReset());
     department.findFirst.mockResolvedValue(null);
-    department.findUnique.mockResolvedValue({ id: 1 });
+    department.findUnique.mockResolvedValue({ id: 1, name: 'HR' });
     auditLog.create.mockReset();
     auditLog.create.mockResolvedValue({ id: 1 });
   });
@@ -141,13 +141,32 @@ describe('Departments (e2e)', () => {
     expect(removed.text).toBe('');
     expect(auditLog.create).toHaveBeenCalledTimes(3);
     expect(auditLog.create).toHaveBeenNthCalledWith(1, {
-      data: { userId: 1, action: 'create', entity: 'department', entityId: 1 },
+      data: {
+        userId: 1,
+        action: 'create',
+        entity: 'department',
+        entityId: 1,
+        entityData: { id: 1, name: 'HR' },
+      },
     });
     expect(auditLog.create).toHaveBeenNthCalledWith(2, {
-      data: { userId: 1, action: 'update', entity: 'department', entityId: 1 },
+      data: {
+        userId: 1,
+        action: 'update',
+        entity: 'department',
+        entityId: 1,
+        entityData: { id: 1, name: 'People' },
+        previousData: { id: 1, name: 'HR' },
+      },
     });
     expect(auditLog.create).toHaveBeenNthCalledWith(3, {
-      data: { userId: 1, action: 'delete', entity: 'department', entityId: 1 },
+      data: {
+        userId: 1,
+        action: 'delete',
+        entity: 'department',
+        entityId: 1,
+        entityData: { id: 1, name: 'People' },
+      },
     });
   });
 

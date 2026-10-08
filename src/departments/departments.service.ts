@@ -45,6 +45,7 @@ export class DepartmentsService {
         'create',
         'department',
         department.id,
+        department,
       );
       return department;
     });
@@ -62,11 +63,21 @@ export class DepartmentsService {
     await this.ensureNameAvailable(dto.name, id);
     try {
       return await this.prisma.$transaction(async (tx) => {
+        const previous = await tx.department.findUnique({ where: { id } });
+        if (!previous) throw new NotFoundException('Department not found');
         const department = await tx.department.update({
           where: { id },
           data: { name: dto.name },
         });
-        await this.auditLogs.record(tx, userId, 'update', 'department', id);
+        await this.auditLogs.record(
+          tx,
+          userId,
+          'update',
+          'department',
+          id,
+          department,
+          previous,
+        );
         return department;
       });
     } catch (error) {
@@ -85,8 +96,15 @@ export class DepartmentsService {
       // Foreign key RESTRICT memeriksa relasi secara atomik saat DELETE.
       // Employee yang masuk bersamaan tidak dapat menyebabkan data yatim.
       await this.prisma.$transaction(async (tx) => {
-        await tx.department.delete({ where: { id } });
-        await this.auditLogs.record(tx, userId, 'delete', 'department', id);
+        const department = await tx.department.delete({ where: { id } });
+        await this.auditLogs.record(
+          tx,
+          userId,
+          'delete',
+          'department',
+          id,
+          department,
+        );
       });
     } catch (error) {
       if (error instanceof Prisma.PrismaClientKnownRequestError) {

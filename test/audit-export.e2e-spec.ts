@@ -13,6 +13,7 @@ describe('Audit logs and CSV export (e2e)', () => {
   let viewerToken: string;
   const auditLog = { findMany: vi.fn(), count: vi.fn() };
   const employee = { findMany: vi.fn() };
+  const department = { findMany: vi.fn() };
 
   beforeAll(async () => {
     const fixture = await Test.createTestingModule({ imports: [AppModule] })
@@ -20,6 +21,7 @@ describe('Audit logs and CSV export (e2e)', () => {
       .useValue({
         auditLog,
         employee,
+        department,
         user: {
           findUnique: vi.fn(({ where }: { where: { id: number } }) =>
             Promise.resolve({
@@ -43,6 +45,7 @@ describe('Audit logs and CSV export (e2e)', () => {
     auditLog.findMany.mockReset();
     auditLog.count.mockReset();
     employee.findMany.mockReset();
+    department.findMany.mockReset();
   });
 
   afterAll(async () => {
@@ -68,6 +71,7 @@ describe('Audit logs and CSV export (e2e)', () => {
       action: 'create',
       entity: 'employee',
       entityId: 5,
+      entityData: { id: 5, name: 'Jane Doe', email: 'jane@example.com' },
       createdAt: '2026-10-07T00:00:00.000Z',
       user: { id: 1, name: 'Administrator', email: 'admin@example.com' },
     };
@@ -78,7 +82,13 @@ describe('Audit logs and CSV export (e2e)', () => {
       .get('/api/audit-logs?page=2&limit=10')
       .auth(adminToken, { type: 'bearer' })
       .expect(200)
-      .expect({ data: [entry], total: 21, page: 2, limit: 10, totalPages: 3 });
+      .expect({
+        data: [{ ...entry, entityDataSource: 'snapshot' }],
+        total: 21,
+        page: 2,
+        limit: 10,
+        totalPages: 3,
+      });
 
     expect(auditLog.findMany).toHaveBeenCalledWith({
       include: { user: { select: { id: true, name: true, email: true } } },
@@ -87,10 +97,41 @@ describe('Audit logs and CSV export (e2e)', () => {
       take: 10,
     });
     expect(auditLog.count).toHaveBeenCalledWith();
+    expect(employee.findMany).not.toHaveBeenCalled();
     await request(app.getHttpServer())
       .get('/api/audit-logs?limit=101')
       .auth(adminToken, { type: 'bearer' })
       .expect(400);
+  });
+
+  it('resolves legacy audit data from the correct entity table', async () => {
+    auditLog.findMany.mockResolvedValue([
+      { id: 1, entity: 'department', entityId: 2, entityData: null },
+      { id: 2, entity: 'employee', entityId: 2, entityData: null },
+      { id: 3, entity: 'employee', entityId: 99, entityData: null },
+    ]);
+    auditLog.count.mockResolvedValue(3);
+    department.findMany.mockResolvedValue([{ id: 2, name: 'Finance' }]);
+    employee.findMany.mockResolvedValue([{ id: 2, name: 'Jane Doe' }]);
+
+    const { body } = await request(app.getHttpServer())
+      .get('/api/audit-logs')
+      .auth(adminToken, { type: 'bearer' })
+      .expect(200);
+    expect(body.data).toEqual([
+      expect.objectContaining({
+        entityData: { id: 2, name: 'Finance' },
+        entityDataSource: 'current',
+      }),
+      expect.objectContaining({
+        entityData: { id: 2, name: 'Jane Doe' },
+        entityDataSource: 'current',
+      }),
+      expect.objectContaining({
+        entityData: null,
+        entityDataSource: 'unavailable',
+      }),
+    ]);
   });
 
   it.each(['admin', 'viewer'])(

@@ -28,7 +28,8 @@ export class AuditLogsController {
   @Get()
   @ApiOperation({
     summary: 'Daftar audit log',
-    description: 'Role: admin. Urutan terbaru lebih dulu.',
+    description:
+      'Role: admin. Urutan terbaru lebih dulu. entityData berisi data terkait; previousData berisi data sebelum update.',
   })
   @ApiOkResponse({ type: AuditLogListResponseDto })
   findAll(@Query() query: ListAuditLogsQueryDto) {

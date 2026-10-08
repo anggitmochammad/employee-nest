@@ -27,6 +27,40 @@ export class AuditLogResponseDto {
   @ApiProperty({ example: 1 })
   entityId: number;
 
+  @ApiProperty({
+    type: 'object',
+    additionalProperties: true,
+    nullable: true,
+    description:
+      'Data department atau employee saat aksi terjadi. Untuk audit lama, data terkini jika record masih ada.',
+    example: {
+      id: 1,
+      name: 'Jane Doe',
+      email: 'jane@example.com',
+      phone: '628123456789',
+      status: true,
+      departmentId: 2,
+      department: { id: 2, name: 'Finance' },
+    },
+  })
+  entityData: Record<string, unknown> | null;
+
+  @ApiProperty({
+    type: 'object',
+    additionalProperties: true,
+    nullable: true,
+    description:
+      'Data sebelum update. Null untuk create, delete, dan audit lama.',
+  })
+  previousData: Record<string, unknown> | null;
+
+  @ApiProperty({
+    enum: ['snapshot', 'current', 'unavailable'],
+    description:
+      'Asal entityData: snapshot historis, record terkini, atau tidak tersedia.',
+  })
+  entityDataSource: 'snapshot' | 'current' | 'unavailable';
+
   @ApiProperty({ format: 'date-time' })
   createdAt: Date;
 
