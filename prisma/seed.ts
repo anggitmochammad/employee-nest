@@ -7,6 +7,7 @@ const databaseUrl = process.env.DATABASE_URL;
 const name = process.env.ADMIN_NAME ?? 'Administrator';
 const email = process.env.ADMIN_EMAIL?.toLowerCase();
 const password = process.env.ADMIN_PASSWORD;
+const viewerEmail = 'viewer@example.com';
 
 const departmentNames = [
   'Human Resources',
@@ -112,6 +113,19 @@ async function main(adminEmail: string, adminPassword: string) {
   });
 
   console.log(`Admin account is ready: ${adminEmail}`);
+
+  await prisma.user.upsert({
+    where: { email: viewerEmail },
+    update: { name: 'Viewer', password: passwordHash, role: 'viewer' },
+    create: {
+      name: 'Viewer',
+      email: viewerEmail,
+      password: passwordHash,
+      role: 'viewer',
+    },
+  });
+
+  console.log(`Viewer account is ready: ${viewerEmail}`);
 
   // Nama department belum memiliki unique constraint, sehingga upsert berdasarkan
   // nama tidak tersedia. Cek dahulu agar seed ulang tidak menambah nama yang sama.

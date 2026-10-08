@@ -66,7 +66,15 @@ Migration membuat tabel users, departments, employees, dan audit_logs.
 
     npx prisma db seed
 
-Seed membuat akun admin, enam department awal (Human Resources, Finance, Information Technology, Operations, Sales, dan Marketing), serta 12 employee contoh yang terhubung ke department tersebut. Seed dapat dijalankan ulang tanpa menduplikasi employee berdasarkan email.
+Seed membuat akun admin, akun viewer, enam department awal (Human Resources, Finance, Information Technology, Operations, Sales, dan Marketing), serta 12 employee contoh yang terhubung ke department tersebut. Seed dapat dijalankan ulang tanpa menduplikasi employee berdasarkan email.
+
+Akun hasil seed:
+
+    Admin: ADMIN_EMAIL dari .env
+    Viewer: viewer@example.com
+    Password admin dan viewer: nilai ADMIN_PASSWORD yang sama dari .env
+
+Akun viewer hanya dapat membaca data dan tidak dapat menjalankan aksi yang membutuhkan role admin.
 
 ## 8. Jalankan aplikasi
 
