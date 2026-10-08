@@ -10,21 +10,21 @@ export interface ExportEmployee {
   email: string;
   phone: string;
   status: boolean;
-  departmentId: number;
   department: { name: string };
 }
 
 export function employeesToCsv(employees: ExportEmployee[]): string {
   const rows = [
-    'id,name,email,phone,status,departmentId,departmentName',
+    'id,nama,email,phone,status karyawan,nama department',
     ...employees.map((employee) =>
       [
         employee.id,
         csvText(employee.name),
         csvText(employee.email),
-        csvText(employee.phone),
-        employee.status,
-        employee.departmentId,
+        // CSV tidak menyimpan tipe kolom. Apostrof memaksa spreadsheet
+        // memperlakukan nomor telepon panjang sebagai teks, bukan notasi ilmiah.
+        csvText(`'${employee.phone}`),
+        csvText(employee.status ? 'Aktif' : 'Tidak Aktif'),
         csvText(employee.department.name),
       ].join(','),
     ),

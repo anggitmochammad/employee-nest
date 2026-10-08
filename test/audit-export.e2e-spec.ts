@@ -249,6 +249,7 @@ describe('Audit logs and CSV export (e2e)', () => {
           '2,"John Doe","john@example.com","\'628123456780","Aktif","Technology"\r\n',
       );
       expect(employee.findMany).toHaveBeenCalledWith({
+        where: {},
         include: { department: { select: { name: true } } },
         orderBy: { id: 'asc' },
       });
@@ -266,6 +267,53 @@ describe('Audit logs and CSV export (e2e)', () => {
     );
   });
 
+  it('exports all matching employees with list filters, including status=false', async () => {
+    employee.findMany.mockResolvedValue([
+      {
+        id: 42,
+        name: 'Jane Doe',
+        email: 'jane@example.com',
+        phone: '628123456789',
+        status: false,
+        department: { name: 'Human Resources' },
+      },
+    ]);
+
+    const response = await request(app.getHttpServer())
+      .get(
+        '/api/employees/export?search=%20JaNe%20&departmentId=1&status=false',
+      )
+      .auth(viewerToken, { type: 'bearer' })
+      .expect(200);
+
+    expect(response.text).toContain(
+      '42,"Jane Doe","jane@example.com","\'628123456789","Tidak Aktif","Human Resources"',
+    );
+    expect(employee.findMany).toHaveBeenCalledWith({
+      where: {
+        OR: [
+          { name: { contains: 'JaNe', mode: 'insensitive' } },
+          { email: { contains: 'JaNe', mode: 'insensitive' } },
+        ],
+        departmentId: 1,
+        status: false,
+      },
+      include: { department: { select: { name: true } } },
+      orderBy: { id: 'asc' },
+    });
+  });
+
+  it.each(['status=invalid', 'departmentId=0', 'departmentId=abc', 'page=2'])(
+    'rejects invalid export query %s',
+    async (query) => {
+      await request(app.getHttpServer())
+        .get(`/api/employees/export?${query}`)
+        .auth(adminToken, { type: 'bearer' })
+        .expect(400);
+      expect(employee.findMany).not.toHaveBeenCalled();
+    },
+  );
+
   it('documents audit and CSV endpoints in Swagger', async () => {
     const { body } = await request(app.getHttpServer())
       .get('/api-documentation-json')
@@ -273,6 +321,13 @@ describe('Audit logs and CSV export (e2e)', () => {
     expect(body.paths).toHaveProperty('/api/audit-logs');
     expect(body.paths).toHaveProperty('/api/audit-logs/users');
     expect(body.paths).toHaveProperty('/api/employees/export');
+    expect(body.paths['/api/employees/export'].get.parameters).toEqual(
+      expect.arrayContaining(
+        ['search', 'departmentId', 'status'].map((name) =>
+          expect.objectContaining({ name, in: 'query' }),
+        ),
+      ),
+    );
     expect(body.paths['/api/audit-logs'].get.description).toContain('admin');
     expect(body.paths['/api/audit-logs'].get.parameters).toEqual(
       expect.arrayContaining(

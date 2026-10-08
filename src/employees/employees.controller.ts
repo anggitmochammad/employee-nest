@@ -34,6 +34,7 @@ import { CreateEmployeeDto } from './dto/create-employee.dto.js';
 import { UpdateEmployeeDto } from './dto/update-employee.dto.js';
 import { EmployeeIdDto } from './dto/employee-id.dto.js';
 import { ListEmployeesQueryDto } from './dto/list-employees-query.dto.js';
+import { ExportEmployeesQueryDto } from './dto/export-employees-query.dto.js';
 import {
   EmployeeListResponseDto,
   EmployeeResponseDto,
@@ -66,16 +67,19 @@ export class EmployeesController {
   @Get('export')
   @Roles(Role.ADMIN, Role.VIEWER)
   @ApiOperation({
-    summary: 'Export seluruh employee ke CSV',
+    summary: 'Export employee ke CSV',
     description:
-      'Role: admin, viewer. Memuat nama department; urutan ID menaik.',
+      'Role: admin, viewer. Filter opsional search, departmentId, dan status mengikuti daftar employee. Mengekspor seluruh hasil yang cocok dalam urutan ID menaik.',
   })
   @ApiOkResponse({
     description: 'File CSV UTF-8',
     content: { 'text/csv': { schema: { type: 'string', format: 'binary' } } },
   })
-  async export(@Res() response: Response): Promise<void> {
-    const csv = await this.employees.exportCsv();
+  async export(
+    @Query() query: ExportEmployeesQueryDto,
+    @Res() response: Response,
+  ): Promise<void> {
+    const csv = await this.employees.exportCsv(query);
     response.setHeader('Content-Type', 'text/csv; charset=utf-8');
     response.setHeader(
       'Content-Disposition',

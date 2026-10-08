@@ -147,6 +147,8 @@ OpenAPI JSON tersedia di http://localhost:3000/api-documentation-json.
 
 Daftar department mendukung pencarian nama melalui parameter opsional `search` dan tetap mengembalikan array. Audit log mendukung `page`, `limit`, `action`, `userId`, `startDate`, `endDate`, dan `sortOrder`; rentang tanggal inklusif menggunakan zona waktu Asia/Jakarta. Endpoint `/api/audit-logs/users` mengembalikan seluruh user yang pernah menjadi pelaku audit.
 
+Export employee mendukung parameter opsional `search`, `departmentId`, dan `status` seperti daftar employee. CSV memuat seluruh employee yang cocok dengan filter, tanpa pagination, dalam urutan ID menaik. Tanpa filter, semua employee diekspor.
+
 Audit log menampilkan `entityData` (data department atau employee saat aksi) dan `previousData` (data sebelum update). `entityDataSource` bernilai `snapshot` untuk audit baru, `current` jika audit lama mengambil record yang masih ada, atau `unavailable` jika record audit lama sudah terhapus. Jalankan migration terbaru sebelum memakai fitur ini.
 
 ## 12. Jalankan test

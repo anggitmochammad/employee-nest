@@ -8,6 +8,7 @@ import { Prisma } from '../generated/prisma/client.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { AuditLogsService } from '../audit-logs/audit-logs.service.js';
 import { employeesToCsv } from './employees.csv.js';
+import type { ExportEmployeesQueryDto } from './dto/export-employees-query.dto.js';
 import type { CreateEmployeeDto } from './dto/create-employee.dto.js';
 import type { UpdateEmployeeDto } from './dto/update-employee.dto.js';
 import {
@@ -27,18 +28,12 @@ export class EmployeesService {
     private readonly auditLogs: AuditLogsService,
   ) {}
 
-  async exportCsv(): Promise<string> {
-    const employees = await this.prisma.employee.findMany({
-      include: { department: { select: { name: true } } },
-      orderBy: { id: 'asc' },
-    });
-    return employeesToCsv(employees);
-  }
-
-  async findAll(query: ListEmployeesQueryDto) {
-    const { page, limit, search, departmentId, status, sortBy, sortOrder } =
-      query;
-    const where: Prisma.EmployeeWhereInput = {
+  private employeeWhere({
+    search,
+    departmentId,
+    status,
+  }: ExportEmployeesQueryDto): Prisma.EmployeeWhereInput {
+    return {
       ...(search
         ? {
             OR: [
@@ -50,6 +45,21 @@ export class EmployeesService {
       ...(departmentId !== undefined ? { departmentId } : {}),
       ...(status !== undefined ? { status } : {}),
     };
+  }
+
+  async exportCsv(query: ExportEmployeesQueryDto): Promise<string> {
+    const where = this.employeeWhere(query);
+    const employees = await this.prisma.employee.findMany({
+      where,
+      include: { department: { select: { name: true } } },
+      orderBy: { id: 'asc' },
+    });
+    return employeesToCsv(employees);
+  }
+
+  async findAll(query: ListEmployeesQueryDto) {
+    const { page, limit, sortBy, sortOrder } = query;
+    const where = this.employeeWhere(query);
     const orderBy: Prisma.EmployeeOrderByWithRelationInput[] = [
       { [sortBy]: sortOrder },
       ...(sortBy === EmployeeSortBy.ID ? [] : [{ id: SortOrder.ASC }]),
