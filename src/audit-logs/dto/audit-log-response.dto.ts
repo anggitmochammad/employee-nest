@@ -1,6 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 
-class AuditActorDto {
+export class AuditActorDto {
   @ApiProperty({ example: 1 })
   id: number;
 

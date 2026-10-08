@@ -7,6 +7,7 @@ import {
   Param,
   Patch,
   Post,
+  Query,
   UseGuards,
 } from '@nestjs/common';
 import {
@@ -32,6 +33,7 @@ import { DepartmentsService } from './departments.service.js';
 import { DepartmentDto } from './dto/department.dto.js';
 import { DepartmentIdDto } from './dto/department-id.dto.js';
 import { DepartmentResponseDto } from './dto/department-response.dto.js';
+import { ListDepartmentsQueryDto } from './dto/list-departments-query.dto.js';
 
 @ApiTags('Departments')
 @ApiBearerAuth('access-token')
@@ -50,11 +52,12 @@ export class DepartmentsController {
   @Roles(Role.ADMIN, Role.VIEWER)
   @ApiOperation({
     summary: 'Daftar department',
-    description: 'Role: admin, viewer. Diurutkan berdasarkan ID menaik.',
+    description:
+      'Role: admin, viewer. Search mencocokkan sebagian nama tanpa membedakan huruf besar-kecil. Diurutkan berdasarkan ID menaik.',
   })
   @ApiOkResponse({ type: DepartmentResponseDto, isArray: true })
-  findAll() {
-    return this.departments.findAll();
+  findAll(@Query() query: ListDepartmentsQueryDto) {
+    return this.departments.findAll(query.search);
   }
 
   @Post()

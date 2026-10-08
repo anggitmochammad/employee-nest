@@ -15,8 +15,15 @@ export class DepartmentsService {
     private readonly auditLogs: AuditLogsService,
   ) {}
 
-  findAll() {
-    return this.prisma.department.findMany({ orderBy: { id: 'asc' } });
+  findAll(search?: string) {
+    return this.prisma.department.findMany({
+      ...(search
+        ? {
+            where: { name: { contains: search, mode: 'insensitive' as const } },
+          }
+        : {}),
+      orderBy: { id: 'asc' },
+    });
   }
 
   private async ensureNameAvailable(name: string, exceptId?: number) {

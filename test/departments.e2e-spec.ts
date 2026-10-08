@@ -90,6 +90,27 @@ describe('Departments (e2e)', () => {
       .auth(viewerToken, { type: 'bearer' })
       .expect(200)
       .expect([]);
+    expect(department.findMany).toHaveBeenNthCalledWith(1, {
+      orderBy: { id: 'asc' },
+    });
+    expect(department.findMany).toHaveBeenNthCalledWith(2, {
+      orderBy: { id: 'asc' },
+    });
+  });
+
+  it('searches department names case-insensitively and keeps an array response', async () => {
+    department.findMany.mockResolvedValue([{ id: 1, name: 'Human Resources' }]);
+
+    await request(app.getHttpServer())
+      .get('/api/departments?search=%20hUmAn%20')
+      .auth(viewerToken, { type: 'bearer' })
+      .expect(200)
+      .expect([{ id: 1, name: 'Human Resources' }]);
+
+    expect(department.findMany).toHaveBeenCalledWith({
+      where: { name: { contains: 'hUmAn', mode: 'insensitive' } },
+      orderBy: { id: 'asc' },
+    });
   });
 
   it('rejects every viewer write before accessing the database', async () => {
@@ -280,6 +301,11 @@ describe('Departments (e2e)', () => {
     const paths = body.paths;
     expect(paths['/api/departments'].get.description).toContain(
       'admin, viewer',
+    );
+    expect(paths['/api/departments'].get.parameters).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ name: 'search', in: 'query' }),
+      ]),
     );
     expect(paths['/api/departments'].post.requestBody).toBeDefined();
     expect(paths['/api/departments/{id}'].patch.parameters).toEqual(
