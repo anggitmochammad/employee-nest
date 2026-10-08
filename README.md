@@ -4,6 +4,13 @@ Backend sistem manajemen employee menggunakan NestJS, PostgreSQL, Prisma, JWT, d
 
 Panduan ini ditujukan untuk yang baru belajar backend. Ikuti langkah dari atas ke bawah.
 
+## Demo live
+
+- Frontend: [Employee React](https://employee-react-xi.vercel.app/)
+- Backend API: [Employee Nest](https://employee-nest.onrender.com)
+
+Endpoint API menggunakan awalan `/api`; health check tersedia di `/health`. Dokumentasi Swagger `/api-documentation` tersedia saat backend dijalankan dengan `NODE_ENV` selain `production`.
+
 ## 1. Persiapan
 
 Pasang Git, Node.js versi 20 atau lebih baru, npm, dan PostgreSQL versi 14 atau lebih baru.
@@ -130,6 +137,8 @@ OpenAPI JSON tersedia di http://localhost:3000/api-documentation-json.
 
 | Method | URL                   | Akses         |
 | ------ | --------------------- | ------------- |
+| GET    | /health               | Public        |
+| GET    | /api                  | Public        |
 | POST   | /api/auth/login       | Public        |
 | GET    | /api/auth/me          | Login         |
 | GET    | /api/departments      | Admin, viewer |
@@ -151,7 +160,52 @@ Export employee mendukung parameter opsional `search`, `departmentId`, dan `stat
 
 Audit log menampilkan `entityData` (data department atau employee saat aksi) dan `previousData` (data sebelum update). `entityDataSource` bernilai `snapshot` untuk audit baru, `current` jika audit lama mengambil record yang masih ada, atau `unavailable` jika record audit lama sudah terhapus. Jalankan migration terbaru sebelum memakai fitur ini.
 
-## 12. Jalankan test
+## 12. Skema database (ERD)
+
+Diagram berikut mengikuti [schema.prisma](prisma/schema.prisma). Nama kolom relasi di database menggunakan `snake_case`.
+
+```mermaid
+erDiagram
+    users ||--o{ audit_logs : mencatat
+    departments ||--o{ employees : menaungi
+
+    users {
+        int id PK
+        string name
+        string email UK
+        string password
+        string role
+    }
+
+    departments {
+        int id PK
+        string name
+    }
+
+    employees {
+        int id PK
+        string name
+        string email UK
+        string phone
+        boolean status
+        int department_id FK
+    }
+
+    audit_logs {
+        int id PK
+        int user_id FK
+        string action
+        string entity
+        int entity_id
+        json entity_data
+        json previous_data
+        datetime created_at
+    }
+```
+
+`employees.department_id` mengacu ke `departments.id`, sedangkan `audit_logs.user_id` mengacu ke `users.id`. `audit_logs.entity_id` menyimpan ID employee atau department sesuai nilai `entity`; kolom ini tidak memiliki foreign key karena audit tetap disimpan setelah data terkait dihapus. `employees.status` bertipe boolean dan bernilai awal `true`.
+
+## 13. Jalankan test
 
     npm test
     npm run test:e2e
@@ -159,7 +213,7 @@ Audit log menampilkan `entityData` (data department atau employee saat aksi) dan
     npm run lint
     npm run build
 
-## 13. Troubleshooting
+## 14. Troubleshooting
 
 ### Database connection unavailable
 
