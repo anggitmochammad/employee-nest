@@ -16,6 +16,7 @@ export async function configureApp(app: INestApplication): Promise<void> {
     .split(',')
     .map((origin) => origin.trim())
     .filter(Boolean);
+  const nodeEnv = config.get<string>('NODE_ENV', 'development');
 
   // set global prefix api kecuali /health
   app.setGlobalPrefix('api', {
@@ -37,28 +38,29 @@ export async function configureApp(app: INestApplication): Promise<void> {
     allowedHeaders: ['Content-Type', 'Authorization'],
   });
 
-  // Swagger UI sengaja berada di luar prefix /api agar URL dokumentasi tetap ringkas.
-  const swaggerConfig = new DocumentBuilder()
-    .setTitle('Employee Management API')
-    .setDescription('Dokumentasi endpoint Employee Management System')
-    .setVersion('1.0')
-    .addBearerAuth(
-      { type: 'http', scheme: 'bearer', bearerFormat: 'JWT' },
-      'access-token',
-    )
-    .build();
-  const swaggerDocument = SwaggerModule.createDocument(app, swaggerConfig);
-  SwaggerModule.setup('api-documentation', app, swaggerDocument, {
-    useGlobalPrefix: false,
-    customSiteTitle: 'Employee Management API Documentation',
-    swaggerOptions: {
-      persistAuthorization: true,
-      tryItOutEnabled: true,
-      displayRequestDuration: true,
-      filter: true,
-    },
-    // Swagger menamai tombol pengiriman "Execute"; sesuaikan dengan istilah mini Postman.
-    customJsStr: `
+  if (nodeEnv !== 'production') {
+    // Swagger UI sengaja berada di luar prefix /api agar URL dokumentasi tetap ringkas.
+    const swaggerConfig = new DocumentBuilder()
+      .setTitle('Employee Management API')
+      .setDescription('Dokumentasi endpoint Employee Management System')
+      .setVersion('1.0')
+      .addBearerAuth(
+        { type: 'http', scheme: 'bearer', bearerFormat: 'JWT' },
+        'access-token',
+      )
+      .build();
+    const swaggerDocument = SwaggerModule.createDocument(app, swaggerConfig);
+    SwaggerModule.setup('api-documentation', app, swaggerDocument, {
+      useGlobalPrefix: false,
+      customSiteTitle: 'Employee Management API Documentation',
+      swaggerOptions: {
+        persistAuthorization: true,
+        tryItOutEnabled: true,
+        displayRequestDuration: true,
+        filter: true,
+      },
+      // Swagger menamai tombol pengiriman "Execute"; sesuaikan dengan istilah mini Postman.
+      customJsStr: `
       (() => {
         const root = document.getElementById('swagger-ui');
         if (!root) return;
@@ -78,8 +80,9 @@ export async function configureApp(app: INestApplication): Promise<void> {
         });
         renameExecuteButtons();
       })();
-    `,
-  });
+      `,
+    });
+  }
 
   app.enableShutdownHooks();
   await app.init();
