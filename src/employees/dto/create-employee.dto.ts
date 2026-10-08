@@ -28,13 +28,24 @@ export class CreateEmployeeDto {
   @IsEmail()
   email: string;
 
-  @ApiProperty({ example: '+62 812-3456-7890' })
+  @ApiProperty({
+    example: '+62 812-3456-7890',
+    description: 'Nomor seluler Indonesia. Disimpan sebagai 628xxxxxxxxxx.',
+  })
   @Transform(({ value }: { value: unknown }) =>
-    typeof value === 'string' ? value.trim() : value,
+    typeof value === 'string'
+      ? (() => {
+          const compact = value.replace(/[ ()-]/g, '');
+          if (compact.startsWith('+62')) return compact.slice(1);
+          if (compact.startsWith('0')) return `62${compact.slice(1)}`;
+          return compact;
+        })()
+      : value,
   )
   @IsString()
-  @Matches(/^\+?[0-9][0-9 ()-]{6,19}$/, {
-    message: 'phone must be a valid phone number',
+  // Format canonical: 628xxxxxxxxx, dengan prefix seluler Indonesia 08xx.
+  @Matches(/^628[1-9][0-9]{7,10}$/, {
+    message: 'phone must be a valid Indonesian mobile number',
   })
   phone: string;
 

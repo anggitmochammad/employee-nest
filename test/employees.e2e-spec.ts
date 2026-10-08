@@ -190,7 +190,7 @@ describe('Employees (e2e)', () => {
         data: {
           name: 'Jane Doe',
           email: 'jane@example.com',
-          phone: '+628123456789',
+          phone: '628123456789',
           departmentId: 2,
           status: true,
         },
@@ -199,6 +199,25 @@ describe('Employees (e2e)', () => {
     expect(auditLog.create).toHaveBeenCalledWith({
       data: { userId: 1, action: 'create', entity: 'employee', entityId: 1 },
     });
+  });
+
+  it('normalizes a local Indonesian mobile number to the canonical format', async () => {
+    employee.create.mockResolvedValue(record);
+    await request(app.getHttpServer())
+      .post('/api/employees')
+      .auth(adminToken, { type: 'bearer' })
+      .send({
+        name: 'Jane Doe',
+        email: 'jane@example.com',
+        phone: '0812 3456-789',
+        departmentId: 2,
+      })
+      .expect(201);
+    expect(employee.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ phone: '628123456789' }),
+      }),
+    );
   });
 
   it.each([
@@ -210,6 +229,24 @@ describe('Employees (e2e)', () => {
     },
     { name: 'Jane', email: 'wrong', phone: '+628123456789', departmentId: 2 },
     { name: 'Jane', email: 'jane@example.com', phone: 'abc', departmentId: 2 },
+    {
+      name: 'Jane',
+      email: 'jane@example.com',
+      phone: '0215551234',
+      departmentId: 2,
+    },
+    {
+      name: 'Jane',
+      email: 'jane@example.com',
+      phone: '628123',
+      departmentId: 2,
+    },
+    {
+      name: 'Jane',
+      email: 'jane@example.com',
+      phone: '+441234567890',
+      departmentId: 2,
+    },
     {
       name: 'Jane',
       email: 'jane@example.com',
@@ -264,6 +301,14 @@ describe('Employees (e2e)', () => {
       })
       .expect(409);
     expect(duplicate.body.message).toBe('Employee email already exists');
+
+    employee.update.mockRejectedValue(error('P2002'));
+    const duplicateUpdate = await http
+      .patch('/api/employees/1')
+      .auth(adminToken, { type: 'bearer' })
+      .send({ email: 'another@example.com' })
+      .expect(409);
+    expect(duplicateUpdate.body.message).toBe('Employee email already exists');
   });
 
   it('updates selected fields, rejects empty patch, and deletes', async () => {
