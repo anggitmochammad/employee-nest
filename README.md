@@ -49,7 +49,7 @@ macOS, Linux, atau Git Bash:
 
     cp .env.example .env
 
-Buka .env lalu sesuaikan:
+Berikut hasil .env (bisa anda sesuaikan untuk admin dan jwt):
 
     PORT=3000
     CORS_ORIGINS="http://localhost:5173"
@@ -58,6 +58,7 @@ Buka .env lalu sesuaikan:
     ADMIN_NAME="Administrator"
     ADMIN_EMAIL="admin@example.com"
     ADMIN_PASSWORD="ganti-password-admin"
+    NODE_ENV=development
     DATABASE_URL="postgresql://postgres:postgres@localhost:5432/employee_db?schema=public"
 
 Sesuaikan username, password, host, port, dan nama database pada DATABASE_URL. Jangan commit .env.
